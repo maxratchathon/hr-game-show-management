@@ -1,0 +1,139 @@
+datasource db {
+  provider = "postgres"
+  url      = env("PRISMA_DATABASE_URL")
+}
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["interactiveTransactions"]
+  output          = "../node_modules/.prisma/client"
+}
+
+enum Status {
+  ALIVE
+  DECREASED
+}
+
+enum StaffRole {
+  TRIANGLE
+  SQUARE
+  CIRCLE
+  RECRUITER
+  FRONTMAN
+}
+
+enum EliminateReason {
+  FAILED
+  DISQUALIFIED
+}
+
+enum SpectatorRole {
+  VIP
+  VVIP
+  NORMAL
+}
+
+model Users {
+  id       Int      @id @default(autoincrement())
+  username String   @unique
+  password String
+  email    String   @unique
+  players  Players?
+  staffs   Staffs?
+}
+
+model Players {
+  id            Int            @id @default(autoincrement())
+  firstName     String
+  lastName      String
+  nickName      String?
+  currentDept   Int
+  status        Status
+
+  recruitedBy   Staffs?        @relation(fields: [recruitedById], references: [id])
+  recruitedById Int?
+  
+  joinDate      DateTime
+  user          Users          @relation(fields: [userId], references: [id])
+  userId        Int            @unique
+  games         GamesPlayers[]
+  eliminations  Eliminations?
+  prize         Prize?
+
+  @@unique([id])
+}
+
+model Staffs {
+  id               Int           @id @default(autoincrement())
+  user             Users         @relation(fields: [userId], references: [id])
+  userId           Int           @unique
+  firstName        String
+  lastName         String
+  nickName         String?
+  status           Status
+  role             StaffRole
+  joinDate         DateTime
+  games            StaffsGames[]
+  recruitedPlayers Players[]
+}
+
+model StaffsGames {
+  id      Int    @id @default(autoincrement())
+  staff   Staffs @relation(fields: [staffId], references: [id])
+  staffId Int
+  game    Games  @relation(fields: [gameId], references: [id])
+  gameId  Int
+}
+
+model Games {
+  id                     Int                      @id @default(autoincrement())
+  gameName               String
+  status                 Status
+  joinDate               DateTime
+  players                GamesPlayers[]
+  eliminations           Eliminations[]
+  StaffsGames            StaffsGames[]
+  SpectatorRoleWatchList SpectatorRoleWatchList[]
+}
+
+model GamesPlayers {
+  id       Int     @id @default(autoincrement())
+  game     Games   @relation(fields: [gameId], references: [id])
+  gameId   Int
+  player   Players @relation(fields: [playerId], references: [id])
+  playerId Int
+}
+
+model Prize {
+  id            Int     @id @default(autoincrement())
+  maxPrize      Int
+  currentMoney  Float
+  alivePlayer   Players @relation(fields: [alivePlayerId], references: [id])
+  alivePlayerId Int     @unique
+}
+
+model Eliminations {
+  id       Int             @id @default(autoincrement())
+  player   Players         @relation(fields: [playerId], references: [id])
+  playerId Int
+  game     Games           @relation(fields: [gameId], references: [id])
+  gameId   Int
+  reason   EliminateReason
+
+  @@unique([playerId])
+}
+
+model Spectator {
+  id            Int                      @id @default(autoincrement())
+  spectatorRole SpectatorRole
+  watchList     SpectatorRoleWatchList[]
+}
+
+model SpectatorRoleWatchList {
+  id          Int           @id @default(autoincrement())
+  role        SpectatorRole
+  game        Games         @relation(fields: [gameAccess], references: [id])
+  gameAccess  Int
+  Spectator   Spectator?    @relation(fields: [spectatorId], references: [id])
+  spectatorId Int?
+}
